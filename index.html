@@ -439,7 +439,7 @@
         </div>
         <div class="btn-row">
           <button id="startBtn" onclick="startSim()">Start Trade</button>
-          <button class="btn-secondary" id="resetBtn" onclick="resetSim()" disabled>Reset</button>
+          <button class="btn-secondary" id="resetBtn" onclick="resetSim()" disabled>Stop</button>
         </div>
       </div>
 
@@ -719,9 +719,9 @@
       simStartTime = performance.now();
 
       document.getElementById('startBtn').disabled = true;
-      document.getElementById('resetBtn').disabled = true;
+      document.getElementById('resetBtn').disabled = false;
       document.getElementById('amount').disabled = true;
-      document.getElementById('customPrice').disabled = true;
+      document.getElementById('customPrice').disabled = false;
 
       updateUI();
       drawChart();
@@ -863,12 +863,21 @@
     }
 
     document.getElementById('customPrice').addEventListener('input', () => {
-      if (running) return;
+      // Changing start price stops the sim and resets to the new price
+      if (running) {
+        running = false;
+        if (animId) cancelAnimationFrame(animId);
+        phase = 'idle';
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+        document.getElementById('amount').disabled = false;
+      }
       const base = getBasePrice();
       currentPrice = base;
       startPrice = base;
       prices = [base];
       tokens = 0;
+      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
       updateUI();
       drawChart();
     });
