@@ -129,6 +129,11 @@
     button:active { transform: scale(0.97); }
     button:disabled { opacity: 0.4; cursor: not-allowed; }
     .btn-secondary { background: #1a1a24; color: #ccc; border: 1px solid #2a2a3a; }
+    .btn-stop-active {
+      background: linear-gradient(135deg, #ff1744, #ff5252) !important;
+      color: #fff !important;
+      border: none !important;
+    }
     .position {
       margin: 10px 14px 16px; background: var(--card2); border-radius: 14px;
       padding: 14px 16px; border: 1px solid #22222e;
@@ -297,7 +302,7 @@
     function drawChart() {
       ctx.clearRect(0, 0, W, H);
       if (prices.length < 2) return;
-      const padL = 8, padR = 64, padT = 16, padB = 20;
+      const padL = 8, padR = 88, padT = 16, padB = 20;
       const chartW = W - padL - padR, chartH = H - padT - padB;
       const minP = Math.min(...prices) * 0.97, maxP = Math.max(...prices) * 1.03;
       const range = maxP - minP || 1;
@@ -329,18 +334,15 @@
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.strokeStyle = '#00e676'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
       const last = pts[pts.length - 1];
-      // dashed tracker line across the tip
       ctx.beginPath(); ctx.setLineDash([4, 4]);
       ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
       ctx.moveTo(padL, last.y); ctx.lineTo(W - 4, last.y); ctx.stroke(); ctx.setLineDash([]);
-      // tip glow + ring (matches screenshot)
       ctx.beginPath(); ctx.arc(last.x, last.y, 8, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(0, 230, 118, 0.35)'; ctx.lineWidth = 2; ctx.stroke();
       ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#00e676'; ctx.fill();
       ctx.beginPath(); ctx.arc(last.x, last.y, 1.8, 0, Math.PI * 2);
       ctx.fillStyle = '#fff'; ctx.fill();
-      // mcap bubble — always leads the tip (to the right), vertically centered
       const mcapLabel = formatMcap(currentPrice * currentCoin.supply);
       ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       const textW = ctx.measureText(mcapLabel).width, bw = textW + 14, bh = 20, br = 10;
@@ -371,11 +373,12 @@
       if (elapsed >= TOTAL_MS) {
         phase = 'done'; running = false;
         document.getElementById('startBtn').disabled = false;
-        document.getElementById('resetBtn').disabled = false;
+        const stopBtn = document.getElementById('resetBtn');
+        stopBtn.disabled = true;
+        stopBtn.classList.remove('btn-stop-active');
         document.getElementById('amount').disabled = false;
         document.getElementById('customPrice').disabled = false;
       } else if (elapsed < PHASE_MS * 2) {
-        // 0–10s: random up/down momentum (real-trade feel)
         phase = 'chop';
         const vol = currentPrice * (0.018 + Math.random() * 0.022);
         const bias = (Math.random() - 0.42);
@@ -385,13 +388,11 @@
           currentPrice *= (Math.random() < 0.5 ? 0.96 + Math.random() * 0.03 : 1.02 + Math.random() * 0.04);
         }
       } else if (elapsed < PHASE_MS * 3) {
-        // 10–15s: slow upward grind
         phase = 'slow';
         const rise = currentPrice * (0.006 + Math.random() * 0.008);
         currentPrice += rise;
         currentPrice += (Math.random() - 0.45) * currentPrice * 0.006;
       } else {
-        // 15–20s: super-slow upward drift to the finish
         phase = 'crawl';
         const rise = currentPrice * (0.002 + Math.random() * 0.0035);
         currentPrice += rise;
@@ -410,8 +411,12 @@
       currentPrice = base; startPrice = base; tokens = tradeAmount / currentPrice;
       prices = [currentPrice]; tick = 0; phase = 'chop'; running = true;
       simStartTime = performance.now();
-      document.getElementById('startBtn').disabled = true;
-      document.getElementById('resetBtn').disabled = false;
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('resetBtn');
+      startBtn.disabled = true;
+      stopBtn.disabled = false;
+      stopBtn.classList.add('btn-stop-active');
+      stopBtn.textContent = 'Stop';
       document.getElementById('amount').disabled = true;
       document.getElementById('customPrice').disabled = false;
       updateUI(); drawChart(); tickSim();
@@ -419,15 +424,38 @@
     function resetSim() {
       running = false;
       if (animId) cancelAnimationFrame(animId);
-      phase = 'idle';
-      const base = getBasePrice();
-      currentPrice = base; startPrice = base; prices = [currentPrice]; tokens = 0;
-      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
-      document.getElementById('startBtn').disabled = false;
-      document.getElementById('resetBtn').disabled = false;
+      phase = 'done';
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('resetBtn');
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      stopBtn.classList.remove('btn-stop-active');
+      stopBtn.textContent = 'Stop';
       document.getElementById('amount').disabled = false;
       document.getElementById('customPrice').disabled = false;
-      updateUI(); drawChart();
+      updateUI();
+      drawChart();
+    }
+    function clearProgress() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      phase = 'idle';
+      const base = getBasePrice();
+      currentPrice = base;
+      startPrice = base;
+      prices = [currentPrice];
+      tokens = 0;
+      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
+      const startBtn = document.getElementById('startBtn');
+      const stopBtn = document.getElementById('resetBtn');
+      startBtn.disabled = false;
+      stopBtn.disabled = true;
+      stopBtn.classList.remove('btn-stop-active');
+      stopBtn.textContent = 'Stop';
+      document.getElementById('amount').disabled = false;
+      document.getElementById('customPrice').disabled = false;
+      updateUI();
+      drawChart();
     }
     function renderCoinList() {
       const list = document.getElementById('coinList');
@@ -448,10 +476,8 @@
       document.getElementById('tokenSub').textContent = coin.sub;
       document.getElementById('avatar').textContent = coin.emoji;
       document.getElementById('customPrice').value = '';
-      const base = getBasePrice();
-      currentPrice = base; startPrice = base; prices = [base]; tokens = 0;
-      document.getElementById('customPrice').placeholder = base.toString();
-      renderCoinList(); updateUI(); drawChart(); closeSidebar();
+      clearProgress();
+      closeSidebar();
     }
     function openSidebar() {
       document.getElementById('sidebar').classList.add('open');
@@ -509,20 +535,8 @@
       await Promise.all([fetchSwordcatPrice(), fetchMajorPrices()]);
       renderCoinList();
     }
-    document.getElementById('customPrice').addEventListener('input', () => {
-      if (running) {
-        running = false;
-        if (animId) cancelAnimationFrame(animId);
-        phase = 'idle';
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('resetBtn').disabled = false;
-        document.getElementById('amount').disabled = false;
-      }
-      const base = getBasePrice();
-      currentPrice = base; startPrice = base; prices = [base]; tokens = 0;
-      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
-      updateUI(); drawChart();
-    });
+    document.getElementById('customPrice').addEventListener('input', () => { clearProgress(); });
+    document.getElementById('amount').addEventListener('input', () => { clearProgress(); });
     renderCoinList(); updateUI(); drawChart();
     fetchLivePrice(); setInterval(fetchLivePrice, 45000);
   </script>
