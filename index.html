@@ -505,7 +505,7 @@
     let animId = null;
     let simStartTime = 0;
     const TOTAL_MS = 20000;
-    const ROLL_MS = 9000;
+    const PHASE_MS = 5000;
     const TICK_MS = 40;
 
     function formatPrice(p) {
@@ -666,30 +666,38 @@
       const elapsed = performance.now() - simStartTime;
       tick++;
 
-      if (phase === 'roll') {
-        const volatility = currentPrice * 0.018;
-        const bias = (Math.random() - 0.52) * volatility;
-        currentPrice = Math.max(currentPrice * 0.4, currentPrice + bias);
-        if (Math.random() < 0.08) currentPrice *= 0.92 + Math.random() * 0.06;
-
-        if (elapsed >= ROLL_MS) {
-          phase = 'boom';
-          boomTarget = currentPrice * (14 + Math.random() * 22);
-        }
-      } else if (phase === 'boom') {
-        const remaining = boomTarget - currentPrice;
-        const step = remaining * (0.07 + Math.random() * 0.07);
-        currentPrice += step;
-        currentPrice += (Math.random() - 0.35) * currentPrice * 0.012;
-
-        if (elapsed >= TOTAL_MS || currentPrice >= boomTarget * 0.96) {
-          phase = 'done';
-          running = false;
-          document.getElementById('startBtn').disabled = false;
-          document.getElementById('resetBtn').disabled = false;
-          document.getElementById('amount').disabled = false;
-          document.getElementById('customPrice').disabled = false;
-        }
+      // Exactly 20s: 5s down → 5s chop → 5s slow up → 5s rocket
+      if (elapsed >= TOTAL_MS) {
+        phase = 'done';
+        running = false;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+        document.getElementById('amount').disabled = false;
+        document.getElementById('customPrice').disabled = false;
+      } else if (elapsed < PHASE_MS) {
+        // 0–5s: downhill
+        phase = 'down';
+        const drop = currentPrice * (0.012 + Math.random() * 0.018);
+        currentPrice = Math.max(startPrice * 0.15, currentPrice - drop);
+        if (Math.random() < 0.12) currentPrice *= 0.94 + Math.random() * 0.03;
+      } else if (elapsed < PHASE_MS * 2) {
+        // 5–10s: fluctuate up and down
+        phase = 'chop';
+        const vol = currentPrice * 0.025;
+        currentPrice += (Math.random() - 0.5) * vol * 2;
+        currentPrice = Math.max(startPrice * 0.12, currentPrice);
+      } else if (elapsed < PHASE_MS * 3) {
+        // 10–15s: slow climb
+        phase = 'slow';
+        const rise = currentPrice * (0.008 + Math.random() * 0.012);
+        currentPrice += rise;
+        currentPrice += (Math.random() - 0.4) * currentPrice * 0.008;
+      } else {
+        // 15–20s: rocket — pile the money high
+        phase = 'rocket';
+        const rise = currentPrice * (0.055 + Math.random() * 0.08);
+        currentPrice += rise;
+        currentPrice += (Math.random() - 0.2) * currentPrice * 0.02;
       }
 
       prices.push(currentPrice);
@@ -714,7 +722,7 @@
       tokens = tradeAmount / currentPrice;
       prices = [currentPrice];
       tick = 0;
-      phase = 'roll';
+      phase = 'down';
       running = true;
       simStartTime = performance.now();
 
