@@ -297,7 +297,7 @@
     function drawChart() {
       ctx.clearRect(0, 0, W, H);
       if (prices.length < 2) return;
-      const padL = 8, padR = 72, padT = 16, padB = 20;
+      const padL = 8, padR = 64, padT = 16, padB = 20;
       const chartW = W - padL - padR, chartH = H - padT - padB;
       const minP = Math.min(...prices) * 0.97, maxP = Math.max(...prices) * 1.03;
       const range = maxP - minP || 1;
@@ -329,26 +329,25 @@
       for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.strokeStyle = '#00e676'; ctx.lineWidth = 2; ctx.lineJoin = 'round'; ctx.stroke();
       const last = pts[pts.length - 1];
-      // dashed tracker line
+      // dashed tracker line across the tip
       ctx.beginPath(); ctx.setLineDash([4, 4]);
       ctx.strokeStyle = 'rgba(255,255,255,0.22)'; ctx.lineWidth = 1;
-      ctx.moveTo(padL, last.y); ctx.lineTo(W - padR, last.y); ctx.stroke(); ctx.setLineDash([]);
-      // tip glow
-      ctx.beginPath(); ctx.arc(last.x, last.y, 7, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 230, 118, 0.22)'; ctx.fill();
-      ctx.beginPath(); ctx.arc(last.x, last.y, 3.5, 0, Math.PI * 2);
+      ctx.moveTo(padL, last.y); ctx.lineTo(W - 4, last.y); ctx.stroke(); ctx.setLineDash([]);
+      // tip glow + ring (matches screenshot)
+      ctx.beginPath(); ctx.arc(last.x, last.y, 8, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(0, 230, 118, 0.35)'; ctx.lineWidth = 2; ctx.stroke();
+      ctx.beginPath(); ctx.arc(last.x, last.y, 4, 0, Math.PI * 2);
       ctx.fillStyle = '#00e676'; ctx.fill();
       ctx.beginPath(); ctx.arc(last.x, last.y, 1.8, 0, Math.PI * 2);
       ctx.fillStyle = '#fff'; ctx.fill();
-      // mcap bubble
+      // mcap bubble — always leads the tip (to the right), vertically centered
       const mcapLabel = formatMcap(currentPrice * currentCoin.supply);
       ctx.font = '600 11px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
       const textW = ctx.measureText(mcapLabel).width, bw = textW + 14, bh = 20, br = 10;
-      let bubbleX = last.x + 10;
-      if (bubbleX + bw > W - padR - 2) bubbleX = last.x - bw - 10;
+      const bubbleX = last.x + 12;
       let bubbleY = last.y - bh / 2;
-      if (bubbleY < padT) bubbleY = padT;
-      if (bubbleY + bh > H - padB) bubbleY = H - padB - bh;
+      if (bubbleY < padT + 2) bubbleY = padT + 2;
+      if (bubbleY + bh > H - padB - 2) bubbleY = H - padB - bh - 2;
       ctx.beginPath();
       ctx.moveTo(bubbleX + br, bubbleY);
       ctx.lineTo(bubbleX + bw - br, bubbleY);
@@ -375,26 +374,28 @@
         document.getElementById('resetBtn').disabled = false;
         document.getElementById('amount').disabled = false;
         document.getElementById('customPrice').disabled = false;
-      } else if (elapsed < PHASE_MS) {
-        phase = 'down';
-        const drop = currentPrice * (0.012 + Math.random() * 0.018);
-        currentPrice = Math.max(startPrice * 0.15, currentPrice - drop);
-        if (Math.random() < 0.12) currentPrice *= 0.94 + Math.random() * 0.03;
       } else if (elapsed < PHASE_MS * 2) {
+        // 0–10s: random up/down momentum (real-trade feel)
         phase = 'chop';
-        const vol = currentPrice * 0.025;
-        currentPrice += (Math.random() - 0.5) * vol * 2;
-        currentPrice = Math.max(startPrice * 0.12, currentPrice);
+        const vol = currentPrice * (0.018 + Math.random() * 0.022);
+        const bias = (Math.random() - 0.42);
+        currentPrice += bias * vol * 2;
+        currentPrice = Math.max(startPrice * 0.25, currentPrice);
+        if (Math.random() < 0.08) {
+          currentPrice *= (Math.random() < 0.5 ? 0.96 + Math.random() * 0.03 : 1.02 + Math.random() * 0.04);
+        }
       } else if (elapsed < PHASE_MS * 3) {
+        // 10–15s: slow upward grind
         phase = 'slow';
-        const rise = currentPrice * (0.008 + Math.random() * 0.012);
+        const rise = currentPrice * (0.006 + Math.random() * 0.008);
         currentPrice += rise;
-        currentPrice += (Math.random() - 0.4) * currentPrice * 0.008;
+        currentPrice += (Math.random() - 0.45) * currentPrice * 0.006;
       } else {
-        phase = 'rocket';
-        const rise = currentPrice * (0.0275 + Math.random() * 0.04);
+        // 15–20s: super-slow upward drift to the finish
+        phase = 'crawl';
+        const rise = currentPrice * (0.002 + Math.random() * 0.0035);
         currentPrice += rise;
-        currentPrice += (Math.random() - 0.2) * currentPrice * 0.01;
+        currentPrice += (Math.random() - 0.48) * currentPrice * 0.002;
       }
       prices.push(currentPrice);
       if (prices.length > 280) prices.shift();
@@ -407,7 +408,7 @@
       if (tradeAmount < 1) tradeAmount = 1;
       const base = getBasePrice();
       currentPrice = base; startPrice = base; tokens = tradeAmount / currentPrice;
-      prices = [currentPrice]; tick = 0; phase = 'down'; running = true;
+      prices = [currentPrice]; tick = 0; phase = 'chop'; running = true;
       simStartTime = performance.now();
       document.getElementById('startBtn').disabled = true;
       document.getElementById('resetBtn').disabled = false;
