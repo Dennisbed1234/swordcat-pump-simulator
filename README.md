@@ -4,10 +4,12 @@ Interactive meme-coin pump simulator that closely clones the classic SWORDCAT-st
 
 ## Features
 - **SWORDCAT live price** pulled from DexScreener every 45 seconds
-- Dark theme matching the original video (green chart, position card, overlays)
+- **Bitcoin, Ethereum, Litecoin & XRP** live prices from CoinGecko
+- Exact **20-second** simulation (roll → boom)
+- Dark theme with professional Coinbase / Kraken-style chart
 - Chart behavior: volatile random walk → explosive upward boom
 - Always-visible **Your position** card with live PnL
-- Sidebar with popular meme coins (BONK, WIF, POPCAT, MEW, PEPE, MOG, FARTCOIN…)
+- Sidebar with popular meme coins (BONK, WIF, POPCAT, MEW, PEPE, MOG, FARTCOIN…) plus majors
 - Mobile-friendly with hamburger menu
 
 ## Live demo
