@@ -637,7 +637,6 @@
         if (tick > 48 + Math.floor(Math.random() * 12)) {
           phase = 'boom';
           boomTarget = currentPrice * (14 + Math.random() * 22);
-          showOverlay('Wtf is a 10k month??');
         }
       } else if (phase === 'boom') {
         const remaining = boomTarget - currentPrice;
