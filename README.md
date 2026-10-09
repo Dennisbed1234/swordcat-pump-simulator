@@ -1,23 +1,19 @@
-# SWORDCAT Pump Simulator
+# Meme Pump Simulator
 
-Interactive meme-coin pump simulator inspired by the classic SWORDCAT-style live charts.
+Interactive meme-coin pump simulator that closely clones the classic SWORDCAT-style trading app UI.
 
 ## Features
-- Dark theme matching popular Solana trading apps
-- Set any trade amount
-- Random upward/downward rolling phase
-- Explosive "boom" pump that shoots the chart high
-- Live price, market-cap, position value & PnL updates
-- Overlay texts just like the original videos
+- **SWORDCAT live price** pulled from DexScreener every 45 seconds
+- Dark theme matching the original video (green chart, position card, overlays)
+- Chart behavior: volatile random walk → explosive upward boom
+- Always-visible **Your position** card with live PnL
+- Sidebar with popular meme coins (BONK, WIF, POPCAT, MEW, PEPE, MOG, FARTCOIN…)
+- Mobile-friendly with hamburger menu
 
-## How to use
-1. Open `index.html` in any modern browser
-2. Enter the amount you want to "trade"
-3. Hit **Start Pump**
-4. Watch the chaos
+## Live demo
+https://swordcat-pump-simulator.vercel.app
 
-Purely simulated — no real money, no real tokens.
+## Repo
+https://github.com/Dennisbed1234/swordcat-pump-simulator
 
----
-
-Repo: https://github.com/Dennisbed1234/swordcat-pump-simulator
+Purely simulated. Not financial advice. Not real trading.
