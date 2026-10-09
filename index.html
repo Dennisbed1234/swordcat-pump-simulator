@@ -463,9 +463,6 @@
   <script>
     const COINS = [
       { id: 'swordcat', name: 'SWORDCAT', sub: 'cat wif sword', emoji: '⚔️', ca: '5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump', supply: 960_000_000, live: true, startPrice: 0.0034, cgId: null },
-      { id: 'bitcoin', name: 'BITCOIN', sub: 'BTC', emoji: '₿', ca: null, supply: 19_700_000, live: true, startPrice: 95000, cgId: 'bitcoin' },
-      { id: 'ethereum', name: 'ETHEREUM', sub: 'ETH', emoji: 'Ξ', ca: null, supply: 120_400_000, live: true, startPrice: 3500, cgId: 'ethereum' },
-      { id: 'litecoin', name: 'LITECOIN', sub: 'LTC', emoji: 'Ł', ca: null, supply: 75_000_000, live: true, startPrice: 95, cgId: 'litecoin' },
       { id: 'xrp', name: 'XRP', sub: 'ripple', emoji: '✕', ca: null, supply: 56_000_000_000, live: true, startPrice: 2.4, cgId: 'ripple' },
       { id: 'bonk', name: 'BONK', sub: 'the first dog coin on Solana', emoji: '🐕', ca: null, supply: 88_000_000_000_000, live: false, startPrice: 0.000022, cgId: null },
       { id: 'wif', name: 'WIF', sub: 'dogwifhat', emoji: '🎩', ca: null, supply: 998_000_000, live: false, startPrice: 1.85, cgId: null },
@@ -584,7 +581,6 @@
       const maxP = Math.max(...prices) * 1.03;
       const range = maxP - minP || 1;
 
-      // Horizontal grid lines (Coinbase / Kraken style)
       ctx.strokeStyle = 'rgba(255,255,255,0.04)';
       ctx.lineWidth = 1;
       const gridCount = 5;
@@ -596,7 +592,6 @@
         ctx.stroke();
       }
 
-      // Subtle vertical grid
       ctx.strokeStyle = 'rgba(255,255,255,0.025)';
       for (let i = 1; i < 6; i++) {
         const x = padL + (chartW / 6) * i;
@@ -614,61 +609,49 @@
         pts.push({ x, y });
       }
 
-      // Smooth area fill under the line
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) {
-        const prev = pts[i - 1];
-        const curr = pts[i];
-        const cpx = (prev.x + curr.x) / 2;
-        ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
-      }
-      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
       ctx.lineTo(pts[pts.length - 1].x, H - padB);
       ctx.lineTo(pts[0].x, H - padB);
       ctx.closePath();
-
       const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
       grad.addColorStop(0, 'rgba(0, 230, 118, 0.28)');
-      grad.addColorStop(0.55, 'rgba(0, 230, 118, 0.08)');
+      grad.addColorStop(0.6, 'rgba(0, 230, 118, 0.08)');
       grad.addColorStop(1, 'rgba(0, 230, 118, 0)');
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Main price line with soft glow (professional exchange style)
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
       for (let i = 1; i < pts.length; i++) {
         const prev = pts[i - 1];
         const curr = pts[i];
         const cpx = (prev.x + curr.x) / 2;
-        ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
+        ctx.bezierCurveTo(cpx, prev.y, cpx, curr.y, curr.x, curr.y);
       }
-      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
-
-      ctx.lineWidth = 2.6;
+      ctx.lineWidth = 2.2;
       ctx.strokeStyle = '#00e676';
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      ctx.shadowColor = 'rgba(0, 230, 118, 0.55)';
+      ctx.shadowColor = 'rgba(0, 230, 118, 0.45)';
       ctx.shadowBlur = 12;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
-      // Current price marker (pulsing-style ring + solid core)
       const last = pts[pts.length - 1];
       ctx.beginPath();
       ctx.arc(last.x, last.y, 9, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 230, 118, 0.18)';
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.2)';
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+      ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2);
       ctx.fillStyle = '#00e676';
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+      ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2);
       ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1;
       ctx.stroke();
     }
 
@@ -681,22 +664,8 @@
 
     function tickSim() {
       if (!running) return;
-
       const elapsed = performance.now() - simStartTime;
       tick++;
-
-      if (elapsed >= TOTAL_MS) {
-        // Force exact end at 20.000 s
-        phase = 'done';
-        running = false;
-        document.getElementById('startBtn').disabled = false;
-        document.getElementById('resetBtn').disabled = false;
-        prices.push(currentPrice);
-        if (prices.length > 280) prices.shift();
-        updateUI();
-        drawChart();
-        return;
-      }
 
       if (phase === 'roll') {
         const volatility = currentPrice * 0.018;
@@ -710,14 +679,17 @@
         }
       } else if (phase === 'boom') {
         const remaining = boomTarget - currentPrice;
-        // Scale boom speed so it finishes near the 20s mark
-        const timeLeft = Math.max(0.001, TOTAL_MS - elapsed);
-        const step = remaining * (0.045 + Math.random() * 0.04) * (TICK_MS / 40);
+        const step = remaining * (0.07 + Math.random() * 0.07);
         currentPrice += step;
         currentPrice += (Math.random() - 0.35) * currentPrice * 0.012;
 
-        if (currentPrice >= boomTarget * 0.97) {
-          currentPrice = boomTarget * (0.97 + Math.random() * 0.04);
+        if (elapsed >= TOTAL_MS || currentPrice >= boomTarget * 0.96) {
+          phase = 'done';
+          running = false;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('resetBtn').disabled = false;
+          document.getElementById('amount').disabled = false;
+          document.getElementById('customPrice').disabled = false;
         }
       }
 
@@ -728,8 +700,7 @@
       drawChart();
 
       if (running) {
-        const nextDelay = Math.max(0, TICK_MS - (performance.now() - (simStartTime + tick * TICK_MS)));
-        animId = requestAnimationFrame(() => setTimeout(tickSim, Math.max(8, nextDelay)));
+        animId = requestAnimationFrame(() => setTimeout(tickSim, TICK_MS));
       }
     }
 
@@ -863,6 +834,7 @@
     async function fetchMajorPrices() {
       try {
         const ids = COINS.filter(c => c.cgId).map(c => c.cgId).join(',');
+        if (!ids) return;
         const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd');
         const data = await res.json();
         COINS.forEach(coin => {
