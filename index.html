@@ -188,11 +188,12 @@
 
     .chart-wrap {
       position: relative;
-      height: 240px;
+      height: 260px;
       margin: 0 10px;
-      background: #0c0c12;
+      background: linear-gradient(180deg, #0b0b11 0%, #0a0a0e 100%);
       border-radius: 14px;
       overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.04);
     }
     canvas { width: 100%; height: 100%; display: block; }
     .live-badge {
@@ -200,7 +201,8 @@
       bottom: 10px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.55);
+      background: rgba(0,0,0,0.6);
+      backdrop-filter: blur(6px);
       color: var(--green);
       font-size: 11px;
       font-weight: 600;
@@ -210,6 +212,7 @@
       align-items: center;
       gap: 6px;
       letter-spacing: 0.3px;
+      border: 1px solid rgba(0,230,118,0.15);
     }
     .live-dot {
       width: 6px;
@@ -453,20 +456,24 @@
     </div>
 
     <div class="footer">
-      Set your own start price · SWORDCAT also pulls live price · Not real trading
+      Set your own start price · Live prices for majors & SWORDCAT · Not real trading
     </div>
   </div>
 
   <script>
     const COINS = [
-      { id: 'swordcat', name: 'SWORDCAT', sub: 'cat wif sword', emoji: '⚔️', ca: '5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump', supply: 960_000_000, live: true, startPrice: 0.0034 },
-      { id: 'bonk', name: 'BONK', sub: 'the first dog coin on Solana', emoji: '🐕', ca: null, supply: 88_000_000_000_000, live: false, startPrice: 0.000022 },
-      { id: 'wif', name: 'WIF', sub: 'dogwifhat', emoji: '🎩', ca: null, supply: 998_000_000, live: false, startPrice: 1.85 },
-      { id: 'popcat', name: 'POPCAT', sub: 'popcat the cat', emoji: '😺', ca: null, supply: 980_000_000, live: false, startPrice: 0.85 },
-      { id: 'mew', name: 'MEW', sub: 'cat in a dogs world', emoji: '🐱', ca: null, supply: 88_000_000_000, live: false, startPrice: 0.0045 },
-      { id: 'pepe', name: 'PEPE', sub: 'pepe the frog', emoji: '🐸', ca: null, supply: 420_690_000_000_000, live: false, startPrice: 0.0000095 },
-      { id: 'mog', name: 'MOG', sub: 'mog coin', emoji: '🗿', ca: null, supply: 390_000_000_000_000, live: false, startPrice: 0.0000012 },
-      { id: 'fartcoin', name: 'FARTCOIN', sub: 'fartcoin', emoji: '💨', ca: null, supply: 1_000_000_000, live: false, startPrice: 0.65 }
+      { id: 'swordcat', name: 'SWORDCAT', sub: 'cat wif sword', emoji: '⚔️', ca: '5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump', supply: 960_000_000, live: true, startPrice: 0.0034, cgId: null },
+      { id: 'bitcoin', name: 'BITCOIN', sub: 'BTC', emoji: '₿', ca: null, supply: 19_700_000, live: true, startPrice: 95000, cgId: 'bitcoin' },
+      { id: 'ethereum', name: 'ETHEREUM', sub: 'ETH', emoji: 'Ξ', ca: null, supply: 120_400_000, live: true, startPrice: 3500, cgId: 'ethereum' },
+      { id: 'litecoin', name: 'LITECOIN', sub: 'LTC', emoji: 'Ł', ca: null, supply: 75_000_000, live: true, startPrice: 95, cgId: 'litecoin' },
+      { id: 'xrp', name: 'XRP', sub: 'ripple', emoji: '✕', ca: null, supply: 56_000_000_000, live: true, startPrice: 2.4, cgId: 'ripple' },
+      { id: 'bonk', name: 'BONK', sub: 'the first dog coin on Solana', emoji: '🐕', ca: null, supply: 88_000_000_000_000, live: false, startPrice: 0.000022, cgId: null },
+      { id: 'wif', name: 'WIF', sub: 'dogwifhat', emoji: '🎩', ca: null, supply: 998_000_000, live: false, startPrice: 1.85, cgId: null },
+      { id: 'popcat', name: 'POPCAT', sub: 'popcat the cat', emoji: '😺', ca: null, supply: 980_000_000, live: false, startPrice: 0.85, cgId: null },
+      { id: 'mew', name: 'MEW', sub: 'cat in a dogs world', emoji: '🐱', ca: null, supply: 88_000_000_000, live: false, startPrice: 0.0045, cgId: null },
+      { id: 'pepe', name: 'PEPE', sub: 'pepe the frog', emoji: '🐸', ca: null, supply: 420_690_000_000_000, live: false, startPrice: 0.0000095, cgId: null },
+      { id: 'mog', name: 'MOG', sub: 'mog coin', emoji: '🗿', ca: null, supply: 390_000_000_000_000, live: false, startPrice: 0.0000012, cgId: null },
+      { id: 'fartcoin', name: 'FARTCOIN', sub: 'fartcoin', emoji: '💨', ca: null, supply: 1_000_000_000, live: false, startPrice: 0.65, cgId: null }
     ];
 
     let currentCoin = COINS[0];
@@ -500,8 +507,13 @@
     let tick = 0;
     let boomTarget = 0;
     let animId = null;
+    let simStartTime = 0;
+    const TOTAL_MS = 20000;
+    const ROLL_MS = 9000;
+    const TICK_MS = 40;
 
     function formatPrice(p) {
+      if (p >= 1000) return '$' + p.toLocaleString('en-US', { maximumFractionDigits: 2 });
       if (p >= 1) return '$' + p.toFixed(4);
       if (p >= 0.01) return '$' + p.toFixed(5);
       if (p >= 0.0001) return '$' + p.toFixed(6);
@@ -509,6 +521,7 @@
       return '$' + p.toExponential(3);
     }
     function formatMcap(m) {
+      if (m >= 1e12) return '$' + (m / 1e12).toFixed(2) + 'T';
       if (m >= 1e9) return '$' + (m / 1e9).toFixed(2) + 'B';
       if (m >= 1e6) return '$' + (m / 1e6).toFixed(2) + 'M';
       if (m >= 1e3) return '$' + (m / 1e3).toFixed(1) + 'K';
@@ -560,61 +573,103 @@
       ctx.clearRect(0, 0, W, H);
       if (prices.length < 2) return;
 
-      const minP = Math.min(...prices) * 0.96;
-      const maxP = Math.max(...prices) * 1.04;
+      const padL = 8;
+      const padR = 8;
+      const padT = 16;
+      const padB = 20;
+      const chartW = W - padL - padR;
+      const chartH = H - padT - padB;
+
+      const minP = Math.min(...prices) * 0.97;
+      const maxP = Math.max(...prices) * 1.03;
       const range = maxP - minP || 1;
 
-      ctx.strokeStyle = 'rgba(255,255,255,0.035)';
+      // Horizontal grid lines (Coinbase / Kraken style)
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
       ctx.lineWidth = 1;
-      for (let i = 1; i < 5; i++) {
-        const y = (H / 5) * i;
+      const gridCount = 5;
+      for (let i = 0; i <= gridCount; i++) {
+        const y = padT + (chartH / gridCount) * i;
         ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(W, y);
+        ctx.moveTo(padL, y);
+        ctx.lineTo(W - padR, y);
+        ctx.stroke();
+      }
+
+      // Subtle vertical grid
+      ctx.strokeStyle = 'rgba(255,255,255,0.025)';
+      for (let i = 1; i < 6; i++) {
+        const x = padL + (chartW / 6) * i;
+        ctx.beginPath();
+        ctx.moveTo(x, padT);
+        ctx.lineTo(x, H - padB);
         ctx.stroke();
       }
 
       const len = prices.length;
       const pts = [];
       for (let i = 0; i < len; i++) {
-        const x = (i / (len - 1)) * (W - 12) + 6;
-        const y = H - 12 - ((prices[i] - minP) / range) * (H - 24);
+        const x = padL + (i / (len - 1)) * chartW;
+        const y = padT + chartH - ((prices[i] - minP) / range) * chartH;
         pts.push({ x, y });
       }
 
+      // Smooth area fill under the line
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.lineTo(pts[pts.length - 1].x, H);
-      ctx.lineTo(pts[0].x, H);
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const cpx = (prev.x + curr.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+      ctx.lineTo(pts[pts.length - 1].x, H - padB);
+      ctx.lineTo(pts[0].x, H - padB);
       ctx.closePath();
-      const grad = ctx.createLinearGradient(0, 0, 0, H);
-      grad.addColorStop(0, 'rgba(0, 230, 118, 0.22)');
+
+      const grad = ctx.createLinearGradient(0, padT, 0, H - padB);
+      grad.addColorStop(0, 'rgba(0, 230, 118, 0.28)');
+      grad.addColorStop(0.55, 'rgba(0, 230, 118, 0.08)');
       grad.addColorStop(1, 'rgba(0, 230, 118, 0)');
       ctx.fillStyle = grad;
       ctx.fill();
 
+      // Main price line with soft glow (professional exchange style)
       ctx.beginPath();
       ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.lineWidth = 2.4;
+      for (let i = 1; i < pts.length; i++) {
+        const prev = pts[i - 1];
+        const curr = pts[i];
+        const cpx = (prev.x + curr.x) / 2;
+        ctx.quadraticCurveTo(prev.x, prev.y, cpx, (prev.y + curr.y) / 2);
+      }
+      ctx.lineTo(pts[pts.length - 1].x, pts[pts.length - 1].y);
+
+      ctx.lineWidth = 2.6;
       ctx.strokeStyle = '#00e676';
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-      ctx.shadowColor = '#00e676';
-      ctx.shadowBlur = 10;
+      ctx.shadowColor = 'rgba(0, 230, 118, 0.55)';
+      ctx.shadowBlur = 12;
       ctx.stroke();
       ctx.shadowBlur = 0;
 
+      // Current price marker (pulsing-style ring + solid core)
       const last = pts[pts.length - 1];
       ctx.beginPath();
-      ctx.arc(last.x, last.y, 8, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(0, 230, 118, 0.22)';
+      ctx.arc(last.x, last.y, 9, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.18)';
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(last.x, last.y, 4.5, 0, Math.PI * 2);
+      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
       ctx.fillStyle = '#00e676';
       ctx.fill();
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
     }
 
     function showOverlay(text, duration = 2000) {
@@ -626,7 +681,22 @@
 
     function tickSim() {
       if (!running) return;
+
+      const elapsed = performance.now() - simStartTime;
       tick++;
+
+      if (elapsed >= TOTAL_MS) {
+        // Force exact end at 20.000 s
+        phase = 'done';
+        running = false;
+        document.getElementById('startBtn').disabled = false;
+        document.getElementById('resetBtn').disabled = false;
+        prices.push(currentPrice);
+        if (prices.length > 280) prices.shift();
+        updateUI();
+        drawChart();
+        return;
+      }
 
       if (phase === 'roll') {
         const volatility = currentPrice * 0.018;
@@ -634,33 +704,32 @@
         currentPrice = Math.max(currentPrice * 0.4, currentPrice + bias);
         if (Math.random() < 0.08) currentPrice *= 0.92 + Math.random() * 0.06;
 
-        if (tick > 48 + Math.floor(Math.random() * 12)) {
+        if (elapsed >= ROLL_MS) {
           phase = 'boom';
           boomTarget = currentPrice * (14 + Math.random() * 22);
         }
       } else if (phase === 'boom') {
         const remaining = boomTarget - currentPrice;
-        const step = remaining * (0.07 + Math.random() * 0.07);
+        // Scale boom speed so it finishes near the 20s mark
+        const timeLeft = Math.max(0.001, TOTAL_MS - elapsed);
+        const step = remaining * (0.045 + Math.random() * 0.04) * (TICK_MS / 40);
         currentPrice += step;
         currentPrice += (Math.random() - 0.35) * currentPrice * 0.012;
 
-        if (currentPrice >= boomTarget * 0.96 || tick > 250) {
-          phase = 'done';
-          running = false;
-          document.getElementById('startBtn').disabled = false;
-          document.getElementById('resetBtn').disabled = false;
-          showOverlay('App in my bio 😎', 7800);
+        if (currentPrice >= boomTarget * 0.97) {
+          currentPrice = boomTarget * (0.97 + Math.random() * 0.04);
         }
       }
 
       prices.push(currentPrice);
-      if (prices.length > 220) prices.shift();
+      if (prices.length > 280) prices.shift();
 
       updateUI();
       drawChart();
 
       if (running) {
-        animId = requestAnimationFrame(() => setTimeout(tickSim, 42));
+        const nextDelay = Math.max(0, TICK_MS - (performance.now() - (simStartTime + tick * TICK_MS)));
+        animId = requestAnimationFrame(() => setTimeout(tickSim, Math.max(8, nextDelay)));
       }
     }
 
@@ -677,6 +746,7 @@
       tick = 0;
       phase = 'roll';
       running = true;
+      simStartTime = performance.now();
 
       document.getElementById('startBtn').disabled = true;
       document.getElementById('resetBtn').disabled = true;
@@ -761,7 +831,7 @@
       document.getElementById('overlayBg').classList.remove('show');
     }
 
-    async function fetchLivePrice() {
+    async function fetchSwordcatPrice() {
       try {
         const res = await fetch('https://api.dexscreener.com/latest/dex/tokens/5tCju6YNxHq5zrA6tGndr6F7TK42mpUFmeE31cSFpump');
         const data = await res.json();
@@ -783,12 +853,42 @@
                 drawChart();
               }
             }
-            renderCoinList();
           }
         }
       } catch (e) {
-        console.warn('Live price fetch failed', e);
+        console.warn('SWORDCAT live price fetch failed', e);
       }
+    }
+
+    async function fetchMajorPrices() {
+      try {
+        const ids = COINS.filter(c => c.cgId).map(c => c.cgId).join(',');
+        const res = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=' + ids + '&vs_currencies=usd');
+        const data = await res.json();
+        COINS.forEach(coin => {
+          if (coin.cgId && data[coin.cgId] && data[coin.cgId].usd > 0) {
+            livePriceCache[coin.id] = data[coin.cgId].usd;
+            if (currentCoin.id === coin.id && phase === 'idle') {
+              const custom = parseFloat(document.getElementById('customPrice').value);
+              if (!(custom > 0)) {
+                currentPrice = data[coin.cgId].usd;
+                startPrice = data[coin.cgId].usd;
+                prices = [data[coin.cgId].usd];
+                document.getElementById('customPrice').placeholder = data[coin.cgId].usd.toString();
+                updateUI();
+                drawChart();
+              }
+            }
+          }
+        });
+      } catch (e) {
+        console.warn('Major coins live price fetch failed', e);
+      }
+    }
+
+    async function fetchLivePrice() {
+      await Promise.all([fetchSwordcatPrice(), fetchMajorPrices()]);
+      renderCoinList();
     }
 
     document.getElementById('customPrice').addEventListener('input', () => {
