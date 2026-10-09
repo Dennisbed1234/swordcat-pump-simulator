@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>SWORDCAT Pump Simulator</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0a0a0f;
+      color: #e0e0e0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      overflow-x: hidden;
+    }
+    .app {
+      width: 100%;
+      max-width: 420px;
+      background: #12121a;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 0 40px rgba(0, 255, 150, 0.08);
+      border: 1px solid #1e1e2a;
+    }
+    /* Header */
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 18px 8px;
+    }
+    .avatar {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #ff6b00, #ffd700);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      flex-shrink: 0;
+    }
+    .token-info { flex: 1; }
+    .token-name {
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: 0.3px;
+    }
+    .token-sub {
+      font-size: 12px;
+      color: #888;
+      margin-top: 1px;
+    }
+    .header-icons {
+      display: flex;
+      gap: 14px;
+      color: #666;
+      font-size: 18px;
+    }
+    /* Price row */
+    .price-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      padding: 4px 18px 12px;
+    }
+    .price-block .price {
+      font-size: 26px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .price-block .change {
+      font-size: 13px;
+      margin-top: 2px;
+      font-weight: 600;
+    }
+    .mcap-block {
+      text-align: right;
+    }
+    .mcap-block .mcap {
+      font-size: 18px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    .mcap-block .label {
+      font-size: 11px;
+      color: #777;
+      margin-top: 2px;
+    }
+    .green { color: #00e676; }
+    .red { color: #ff5252; }
+    /* Chart */
+    .chart-wrap {
+      position: relative;
+      height: 220px;
+      margin: 0 8px;
+      background: #0d0d14;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .live-badge {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: #00e676;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .live-dot {
+      width: 6px;
+      height: 6px;
+      background: #00e676;
+      border-radius: 50%;
+      animation: pulse 1.2s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+    /* Controls */
+    .controls {
+      padding: 16px 18px 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .input-row {
+      display: flex;
+      gap: 10px;
+    }
+    input[type="number"] {
+      flex: 1;
+      background: #1a1a24;
+      border: 1px solid #2a2a3a;
+      border-radius: 12px;
+      color: #fff;
+      font-size: 16px;
+      padding: 12px 14px;
+      outline: none;
+      font-variant-numeric: tabular-nums;
+    }
+    input[type="number"]:focus {
+      border-color: #00e676;
+    }
+    button {
+      background: linear-gradient(135deg, #00c853, #00e676);
+      color: #000;
+      border: none;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 12px 22px;
+      cursor: pointer;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+    button:active { transform: scale(0.97); }
+    button:disabled {
+      opacity: 0.45;
+      cursor: not-allowed;
+    }
+    .btn-row {
+      display: flex;
+      gap: 10px;
+    }
+    .btn-row button { flex: 1; }
+    .btn-secondary {
+      background: #1a1a24;
+      color: #ccc;
+      border: 1px solid #2a2a3a;
+    }
+    /* Position card */
+    .position {
+      margin: 8px 14px 18px;
+      background: #16161f;
+      border-radius: 14px;
+      padding: 14px 16px;
+      border: 1px solid #22222e;
+    }
+    .pos-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .pos-label {
+      font-size: 12px;
+      color: #888;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pos-dot {
+      width: 7px;
+      height: 7px;
+      background: #00e676;
+      border-radius: 50%;
+    }
+    .pos-value {
+      font-size: 22px;
+      font-weight: 700;
+      font-variant-numeric: tabular-nums;
+    }
+    .pos-stats {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 6px;
+    }
+    .pos-tokens {
+      font-size: 12px;
+      color: #777;
+    }
+    .pos-pnl {
+      font-size: 14px;
+      font-weight: 600;
+      font-variant-numeric: tabular-nums;
+    }
+    /* Overlay text */
+    .overlay-text {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 18px;
+      font-weight: 700;
+      color: #fff;
+      text-shadow: 0 2px 12px rgba(0,0,0,0.8);
+      opacity: 0;
+      transition: opacity 0.4s;
+      pointer-events: none;
+      text-align: center;
+      white-space: nowrap;
+    }
+    .overlay-text.show { opacity: 1; }
+    /* Footer note */
+    .footer {
+      text-align: center;
+      font-size: 11px;
+      color: #555;
+      margin-top: 14px;
+      max-width: 360px;
+      line-height: 1.4;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="avatar">⚔️</div>
+      <div class="token-info">
+        <div class="token-name">SWORDCAT</div>
+        <div class="token-sub">cat wif sword</div>
+      </div>
+      <div class="header-icons">⏱ ☆ ↗</div>
+    </div>
+
+    <div class="price-row">
+      <div class="price-block">
+        <div class="price green" id="price">$0.0003800</div>
+        <div class="change green" id="change">▲ 0.00%</div>
+      </div>
+      <div class="mcap-block">
+        <div class="mcap" id="mcap">$380.0K</div>
+        <div class="label">Market cap</div>
+      </div>
+    </div>
+
+    <div class="chart-wrap">
+      <canvas id="chart"></canvas>
+      <div class="overlay-text" id="overlay"></div>
+      <div class="live-badge"><span class="live-dot"></span> LIVE · 1H</div>
+    </div>
+
+    <div class="controls">
+      <div class="input-row">
+        <input type="number" id="amount" placeholder="Trade amount ($)" value="1000" min="1" step="1" />
+      </div>
+      <div class="btn-row">
+        <button id="startBtn" onclick="startSim()">Start Pump</button>
+        <button class="btn-secondary" id="resetBtn" onclick="resetSim()" disabled>Reset</button>
+      </div>
+    </div>
+
+    <div class="position">
+      <div class="pos-header">
+        <div class="pos-label"><span class="pos-dot"></span> Your position</div>
+      </div>
+      <div class="pos-value" id="posValue">$1,000.00</div>
+      <div class="pos-stats">
+        <div class="pos-tokens" id="posTokens">— SWORDCAT</div>
+        <div class="pos-pnl green" id="posPnl">+$0.00 · 0.00%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Purely simulated · Random walk then explosive pump · Not real trading
+  </div>
+
+  <script>
+    const canvas = document.getElementById('chart');
+    const ctx = canvas.getContext('2d');
+    let W, H;
+
+    function resize() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      W = rect.width * devicePixelRatio;
+      H = rect.height * devicePixelRatio;
+      canvas.width = W;
+      canvas.height = H;
+      canvas.style.width = rect.width + 'px';
+      canvas.style.height = rect.height + 'px';
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      W = rect.width;
+      H = rect.height;
+    }
+    window.addEventListener('resize', () => { resize(); drawChart(); });
+    resize();
+
+    // Simulation state
+    let running = false;
+    let prices = [];
+    let basePrice = 0.00038;
+    let currentPrice = basePrice;
+    let startPrice = basePrice;
+    let tradeAmount = 1000;
+    let tokens = 0;
+    let phase = 'idle'; // idle | roll | boom | done
+    let tick = 0;
+    let boomTarget = 0;
+    let animId = null;
+
+    const TOTAL_SUPPLY = 1_000_000_000; // fictional
+
+    function formatPrice(p) {
+      if (p < 0.0001) return '$' + p.toFixed(8).replace(/0+$/,'').replace(/\.$/,'');
+      if (p < 0.01) return '$' + p.toFixed(7);
+      return '$' + p.toFixed(6);
+    }
+    function formatMcap(m) {
+      if (m >= 1e6) return '$' + (m / 1e6).toFixed(2) + 'M';
+      if (m >= 1e3) return '$' + (m / 1e3).toFixed(1) + 'K';
+      return '$' + m.toFixed(0);
+    }
+    function formatMoney(v) {
+      return '$' + v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+    function formatPct(p) {
+      return (p >= 0 ? '▲ ' : '▼ ') + Math.abs(p).toFixed(2) + '%';
+    }
+
+    function updateUI() {
+      const mcap = currentPrice * TOTAL_SUPPLY;
+      const pct = ((currentPrice - startPrice) / startPrice) * 100;
+      const posVal = tokens * currentPrice;
+      const pnl = posVal - tradeAmount;
+      const pnlPct = (pnl / tradeAmount) * 100;
+
+      const priceEl = document.getElementById('price');
+      const changeEl = document.getElementById('change');
+      priceEl.textContent = formatPrice(currentPrice);
+      changeEl.textContent = formatPct(pct);
+      priceEl.className = 'price ' + (pct >= 0 ? 'green' : 'red');
+      changeEl.className = 'change ' + (pct >= 0 ? 'green' : 'red');
+
+      document.getElementById('mcap').textContent = formatMcap(mcap);
+
+      document.getElementById('posValue').textContent = formatMoney(posVal);
+      document.getElementById('posTokens').textContent = tokens.toLocaleString() + ' SWORDCAT';
+
+      const pnlEl = document.getElementById('posPnl');
+      pnlEl.textContent = (pnl >= 0 ? '+' : '') + formatMoney(pnl) + ' · ' + (pnlPct >= 0 ? '▲ ' : '▼ ') + Math.abs(pnlPct).toFixed(2) + '%';
+      pnlEl.className = 'pos-pnl ' + (pnl >= 0 ? 'green' : 'red');
+    }
+
+    function drawChart() {
+      ctx.clearRect(0, 0, W, H);
+      if (prices.length < 2) return;
+
+      const minP = Math.min(...prices) * 0.97;
+      const maxP = Math.max(...prices) * 1.03;
+      const range = maxP - minP || 1;
+
+      // Grid lines
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 1;
+      for (let i = 1; i < 4; i++) {
+        const y = (H / 4) * i;
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(W, y);
+        ctx.stroke();
+      }
+
+      // Line
+      ctx.beginPath();
+      ctx.lineWidth = 2.5;
+      ctx.strokeStyle = '#00e676';
+      ctx.lineJoin = 'round';
+      ctx.lineCap = 'round';
+
+      const len = prices.length;
+      for (let i = 0; i < len; i++) {
+        const x = (i / (len - 1)) * (W - 10) + 5;
+        const y = H - 10 - ((prices[i] - minP) / range) * (H - 20);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Glow
+      ctx.shadowColor = '#00e676';
+      ctx.shadowBlur = 12;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Fill under curve
+      const lastX = ((len - 1) / (len - 1)) * (W - 10) + 5;
+      const lastY = H - 10 - ((prices[len - 1] - minP) / range) * (H - 20);
+      ctx.lineTo(lastX, H);
+      ctx.lineTo(5, H);
+      ctx.closePath();
+      const grad = ctx.createLinearGradient(0, 0, 0, H);
+      grad.addColorStop(0, 'rgba(0, 230, 118, 0.25)');
+      grad.addColorStop(1, 'rgba(0, 230, 118, 0)');
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      // End dot
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 5, 0, Math.PI * 2);
+      ctx.fillStyle = '#00e676';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(lastX, lastY, 9, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0, 230, 118, 0.25)';
+      ctx.fill();
+    }
+
+    function showOverlay(text, duration = 1800) {
+      const el = document.getElementById('overlay');
+      el.textContent = text;
+      el.classList.add('show');
+      setTimeout(() => el.classList.remove('show'), duration);
+    }
+
+    function tickSim() {
+      if (!running) return;
+
+      tick++;
+
+      if (phase === 'roll') {
+        // Random walk for ~3-4 seconds (fast)
+        const noise = (Math.random() - 0.48) * 0.000012;
+        currentPrice = Math.max(0.00005, currentPrice + noise);
+
+        if (tick > 55) {
+          phase = 'boom';
+          boomTarget = currentPrice * (12 + Math.random() * 18); // 12x–30x
+          showOverlay('Wtf is a 10k month??');
+        }
+      } else if (phase === 'boom') {
+        // Explosive upward
+        const remaining = boomTarget - currentPrice;
+        const step = remaining * (0.08 + Math.random() * 0.06);
+        currentPrice += step;
+
+        // Small wiggles even during boom
+        currentPrice += (Math.random() - 0.3) * currentPrice * 0.008;
+
+        if (currentPrice >= boomTarget * 0.97 || tick > 140) {
+          phase = 'done';
+          running = false;
+          document.getElementById('startBtn').disabled = false;
+          document.getElementById('resetBtn').disabled = false;
+          showOverlay('App in my bio 😎', 2500);
+        }
+      }
+
+      prices.push(currentPrice);
+      if (prices.length > 120) prices.shift();
+
+      updateUI();
+      drawChart();
+
+      if (running) {
+        animId = requestAnimationFrame(() => {
+          setTimeout(tickSim, 45); // ~22 fps feel
+        });
+      }
+    }
+
+    function startSim() {
+      if (running) return;
+      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
+      if (tradeAmount < 1) tradeAmount = 1;
+
+      // Reset state
+      basePrice = 0.00032 + Math.random() * 0.00012;
+      currentPrice = basePrice;
+      startPrice = basePrice;
+      tokens = tradeAmount / basePrice;
+      prices = [currentPrice];
+      tick = 0;
+      phase = 'roll';
+      running = true;
+
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('resetBtn').disabled = true;
+      document.getElementById('amount').disabled = true;
+
+      updateUI();
+      drawChart();
+      tickSim();
+    }
+
+    function resetSim() {
+      running = false;
+      if (animId) cancelAnimationFrame(animId);
+      phase = 'idle';
+      currentPrice = 0.00038;
+      startPrice = currentPrice;
+      prices = [currentPrice];
+      tokens = 0;
+      tradeAmount = parseFloat(document.getElementById('amount').value) || 1000;
+
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('resetBtn').disabled = true;
+      document.getElementById('amount').disabled = false;
+
+      document.getElementById('posValue').textContent = formatMoney(tradeAmount);
+      document.getElementById('posTokens').textContent = '— SWORDCAT';
+      document.getElementById('posPnl').textContent = '+$0.00 · 0.00%';
+      document.getElementById('posPnl').className = 'pos-pnl green';
+
+      updateUI();
+      drawChart();
+    }
+
+    // Init
+    prices = [currentPrice];
+    updateUI();
+    drawChart();
+  </script>
+</body>
+</html>
